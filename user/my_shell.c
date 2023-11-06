@@ -83,11 +83,14 @@ int executeCommand(char* cmd, char *arguments[]){
 
 int pipeThis(int numWords, char **argv){
 
-    //find where the pipe is
+    printf("recurring\n");
+
+    //find where the rightmost pipe is
     int pipeIndex = 0;
-    for(int i = 0; i < numWords; i++){
+    for(int i = numWords; i > 0; i--){
         if(strcmp(argv[i], "|")==0){
             pipeIndex = i;
+            break;
         }  
     }
 
@@ -96,20 +99,29 @@ int pipeThis(int numWords, char **argv){
     char *leftArgs[MAX_WORD_LENGTH];
     char *rightArgs[MAX_WORD_LENGTH];
 
+    int lastPipe = 1;
+
     //copy the words into the correct arrays depending on which side of the pipe the are on
-    for(int i = 0; i <= numWords; i++){
+    for(int i = 0; i < numWords; i++){
 
-        if(strcmp(argv[i], "|") != 0){
-            if(i < pipeIndex){
-                leftArgs[i] = argv[i];
-                //printf("left: %s\n", leftArgs[i]);
+        if(i < pipeIndex){
+            leftArgs[i] = argv[i];
+            printf("left got: %s\n", leftArgs[i]);
+            //check if the left args have a pipe in them
+            if(strcmp(argv[i], "|") == 0){
+                lastPipe = 0;
             }
-            else if(i > pipeIndex){
-                rightArgs[i - pipeIndex - 1] = argv[i];
-                //printf("right: %s\n", rightArgs[i - pipeIndex - 1]);
-            }
-
+            //printf("left: %s\n", leftArgs[i]);
         }
+        else if(i > pipeIndex){
+            rightArgs[i - pipeIndex - 1] = argv[i];
+            printf("right got: %s\n", rightArgs[i - pipeIndex - 1]);
+        }
+
+    }
+    if(lastPipe == 0){
+        printf("sending: %s,%s,%s,%s,%s\n", leftArgs[0], leftArgs[1], leftArgs[2], leftArgs[3], leftArgs[4]);
+        pipeThis(pipeIndex, leftArgs);
     }
 
     int p[2];
@@ -143,7 +155,7 @@ int pipeThis(int numWords, char **argv){
 
 }
 
-int pipeChain(int numWords, char **argv){
+/*int pipeChain(int numWords, char **argv){
 
     //find the position of the last pipe and how many pipes there are
     int lastPipeIndex = 0;
@@ -173,7 +185,7 @@ int pipeChain(int numWords, char **argv){
     }
 
     return 0;
-}
+}*/
 
 int main(void) {
     //make a whole shell :)
@@ -224,8 +236,8 @@ int main(void) {
         }
         //handles pipes
         else if(containsPipe == 1){
-            err = pipeChain(argc, arguments);
-            //err = pipeThis(argc, arguments);
+            //err = pipeChain(argc, arguments);
+            err = pipeThis(argc, arguments);
         }
         //for when theres no pipes
         else{
