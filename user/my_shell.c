@@ -28,21 +28,20 @@ int parseUserInput(char *b, char **argv) {
 
         char currentChar = *b;
 
-        if (currentChar != ' ') {
+        if (currentChar != ' ' && currentChar != '\n' && currentChar != '\0') {
             buffer[bufferIndex] = currentChar;
             bufferIndex++;
             inWord = 1;
         } else if (inWord) {
             buffer[bufferIndex] = '\0';  // Null-terminate the word
-            for (int j = 0; buffer[j] != '\0'; j++) {
-                argv[wordCount][j] = buffer[j];
-                
-            }
-            argv[wordCount][bufferIndex] = '\0';  // Null-terminate the word in the result array
+            strcpy(argv[wordCount], buffer);
+
             wordCount++;
             bufferIndex = 0;
             inWord = 0;
+
         }
+        printf("buffer:%s<-\n", buffer);
         b++;
 
     }
@@ -50,13 +49,11 @@ int parseUserInput(char *b, char **argv) {
     if (inWord) {
         // Handle the last word if it's not followed by a space
         buffer[bufferIndex] = '\0';  // Null-terminate the last word
-        for (int j = 0; buffer[j] != '\0'; j++) {
-            argv[wordCount][j] = buffer[j];
-        }
-        argv[wordCount][bufferIndex] = '\0';  // Null-terminate the last word in the result array
+        strcpy(argv[wordCount], buffer);
         wordCount++;
     }
     
+
     return wordCount;
 
 }
@@ -111,11 +108,12 @@ int main(void) {
         int argc;
         argc = parseUserInput(b, argv);
         
-        char *arguments[50];  
+        char *arguments[50]; 
         // Put the separated words into arguments
         for (int i = 0; i < argc; i++) {
             //printf("Word %d: %s\n", i + 1, argv[i]);
             arguments[i] = argv[i];
+            printf("argument: %s\n", arguments[i]);
             
         }
 
@@ -131,6 +129,12 @@ int main(void) {
         //err = executeCommand(argv[0], arguments);
         printf("exec: %d\n", err);
 
+        //emptys arguments
+        for(int i = 0; i < argc; i++){
+            for(int j = 0; arguments[i][j] != '\0'; j++){
+                arguments[i][j] = '\0';
+            }
+        }
 
     }
     return 0;
