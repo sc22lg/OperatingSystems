@@ -61,6 +61,24 @@ int parseUserInput(char *b, char **argv) {
 
 }
 
+int executeCommand(char* cmd, char *arguments[]){
+
+    int temp = 0;
+    int f = fork();
+    if (f < 0) {
+        fprintf(2, "fork failed\n");
+        exit(1);
+    } 
+    else if (f == 0){
+        temp = exec(cmd, arguments);
+    }
+    else{
+        wait(0);
+    }
+
+    return temp;
+}
+
 int main(void) {
     //make a whole shell :)
     
@@ -95,25 +113,8 @@ int main(void) {
         }
 
         //printf("number of words: %d\n", argc);
-
-        //execute the command
-        int f = fork();
-        if (f < 0) {
-
-            fprintf(2, "fork failed\n");
-            exit(1);
-
-        } 
-        else if (f == 0){
-            
-            int temp = exec(argv[0], arguments);
-            printf("temp: %d\n", temp);
-
-        }
-        else{
-            wait(0);
-        }
-        
+        int err = executeCommand(argv[0], arguments);
+        printf("exec: %d\n", err);
 
 
     }
