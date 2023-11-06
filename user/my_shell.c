@@ -63,6 +63,12 @@ int parseUserInput(char *b, char **argv) {
 
 int executeCommand(char* cmd, char *arguments[]){
 
+    //put a '/' before the command
+    char *buff;
+    buff = (char *)malloc(strlen(cmd) + 1);
+    buff[0] = '/';
+    strcpy(buff + 1, cmd);
+
     int temp = 0;
     int f = fork();
     if (f < 0) {
@@ -70,7 +76,7 @@ int executeCommand(char* cmd, char *arguments[]){
         exit(1);
     } 
     else if (f == 0){
-        temp = exec(cmd, arguments);
+        temp = exec(buff, arguments);
     }
     else{
         wait(0);
@@ -100,6 +106,7 @@ int main(void) {
         printf(">>>");
         read(0, b, sizeof(in_buff));
 
+        //get the individual words from user input
         char **argv = malloc2dCharArray(MAXARG, MAX_WORD_LENGTH);
         int argc;
         argc = parseUserInput(b, argv);
@@ -113,7 +120,15 @@ int main(void) {
         }
 
         //printf("number of words: %d\n", argc);
-        int err = executeCommand(argv[0], arguments);
+        int err = 0;
+        //handle the special case for cd
+        if(strcmp(argv[0], "cd")==0){
+            chdir(arguments[1]);
+        }
+        else{
+            err = executeCommand(argv[0], arguments);
+        }
+        //err = executeCommand(argv[0], arguments);
         printf("exec: %d\n", err);
 
 
