@@ -71,6 +71,7 @@ int executeCommand(char* cmd, char *arguments[]){
         exit(1);
     } 
     else if (f == 0){
+        printf("arguments before exec: %s, %s\n", arguments[0], arguments[1]);
         temp = exec(buff, arguments);
     }
     else{
@@ -96,7 +97,7 @@ int pipeThis(int numWords, char **argv){
     char *rightArgs[MAX_WORD_LENGTH];
 
     //copy the words into the correct arrays depending on which side of the pipe the are on
-    for(int i = 0; i < numWords; i++){
+    for(int i = 0; i <= numWords; i++){
 
         if(strcmp(argv[i], "|") != 0){
             if(i < pipeIndex){
@@ -111,38 +112,38 @@ int pipeThis(int numWords, char **argv){
         }
     }
 
-
     int p[2];
 
+    printf("arguments before fork: %s, %s, %s, %s\n", leftArgs[0], leftArgs[1], rightArgs[0], rightArgs[1]);
+    //cat README | grep the | grep bug
     pipe(p);
-    //child to run leftArgs
-    if(fork() == 0){
-        //execute command will write to the pipe
+    if(fork() == 0) {
         close(1);
         dup(p[1]);
         close(p[1]);
         close(p[0]);
         executeCommand(leftArgs[0], leftArgs);
         exit(0);
-    }
-    //parent to run rightArgs
-    else{
-        //execute command will read from the pipe
-        close(0);
-        dup(p[0]);
-        close(p[1]);
-        close(p[0]);
-        wait(0);
-        executeCommand(rightArgs[0], rightArgs);
-        
+    } 
+    if(fork() == 0){
+      close(0);
+      dup(p[0]);
+      close(p[0]);
+      close(p[1]);
+      executeCommand(rightArgs[0], rightArgs);
+      exit(0);
     }
 
+    close(p[0]);
+    close(p[1]);
+    wait(0);
+    wait(0);
 
     return 0;
 
 }
 
-/*int pipeChain(int numWords, char **argv){
+int pipeChain(int numWords, char **argv){
 
     //find the position of the last pipe and how many pipes there are
     int lastPipeIndex = 0;
@@ -153,8 +154,10 @@ int pipeThis(int numWords, char **argv){
             lastPipeIndex = i;
         }  
     }
+    printf("pipe count: %d\n", pipeCount);
 
     if(pipeCount == 1){
+        printf("arguments before pipe function: %s, %s, %s, %s, %s\n", argv[0], argv[1], argv[2], argv[3], argv[4]);
         pipeThis(numWords, argv);
     }
     else if(pipeCount >= 1){
@@ -163,13 +166,14 @@ int pipeThis(int numWords, char **argv){
         char **newArgs = malloc2dCharArray(lastPipeIndex, MAX_WORD_LENGTH);
         for(int i = 0; i < lastPipeIndex; i++){
             strcpy(newArgs[i], argv[i]);
+            printf("string: %s\n", newArgs[i]);
         }
         //send the new arguments and its length to this function recursively
-        pipeChain(lastPipeIndex-1, newArgs);
+        pipeChain(lastPipeIndex, newArgs);
     }
 
     return 0;
-}*/
+}
 
 int main(void) {
     //make a whole shell :)
@@ -191,7 +195,7 @@ int main(void) {
         //take an input from the user
         printf(">>>");
         read(0, b, sizeof(in_buff));
-        printf("thanks for your user input :)");
+        printf("Thank you for your user input\n");
 
         //get the individual words from user input
         char **argv = malloc2dCharArray(MAXARG, MAX_WORD_LENGTH);
@@ -215,10 +219,13 @@ int main(void) {
         if(strcmp(argv[0], "cd")==0){
             chdir(arguments[1]);
         }
+        else if(strcmp(argv[0], "exit")==0){
+            shell_running = 0;
+        }
         //handles pipes
         else if(containsPipe == 1){
-            //err = pipeChain(argc, arguments);
-            err = pipeThis(argc, arguments);
+            err = pipeChain(argc, arguments);
+            //err = pipeThis(argc, arguments);
         }
         //for when theres no pipes
         else{
