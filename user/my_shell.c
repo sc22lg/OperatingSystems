@@ -86,15 +86,17 @@ int main(void) {
         int argc;
         argc = parseUserInput(b, argv);
         
-        // Print the separated words
+        char *arguments[50];  
+        // Put the separated words into arguments
         for (int i = 0; i < argc; i++) {
-            printf("Word %d: %s\n", i + 1, argv[i]);
+            //printf("Word %d: %s\n", i + 1, argv[i]);
+            arguments[i] = argv[i];
+            
         }
 
-        printf("number of words: %d\n", argc);
+        //printf("number of words: %d\n", argc);
 
         //execute the command
-
         int f = fork();
         if (f < 0) {
 
@@ -104,11 +106,7 @@ int main(void) {
         } 
         else if (f == 0){
             
-            fprintf(2, "argv[0]=%s", argv[0]);
-            fprintf(2, "argv[1]=%s", argv[1]);
-            fprintf(2, "argv[2]=%s", argv[2]);
-            fprintf(2, "argv[3]=%s", argv[3]);
-            int temp = exec(argv[0], argv);
+            int temp = exec(argv[0], arguments);
             printf("temp: %d\n", temp);
 
         }
