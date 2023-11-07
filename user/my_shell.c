@@ -1,8 +1,9 @@
 #include "kernel/types.h"
 #include "kernel/param.h"
+#include "kernel/fcntl.h"
 #include "user/user.h"
 
-#define MAX_WORD_LENGTH 50
+#define MAX_WORD_LENGTH 30
 
 char **malloc2dCharArray(int dim1, int dim2){
 
@@ -56,31 +57,23 @@ int parseUserInput(char *b, char **argv) {
 
 }
 
-int executeCommand(char* cmd, char *arguments[]){
+void executeCommand(char* cmd, char **argv){
 
-    //put a '/' before the command
+    // put a '/' before the command
     char *buff;
     buff = (char *)malloc(strlen(cmd) + 1);
     buff[0] = '/';
     strcpy(buff + 1, cmd);
+    argv[0] = buff;
+    
+    // char *argv[MAX_WORD_SIZE];
 
-    int temp = 0;
-    int f = fork();
-    if (f < 0) {
-        fprintf(2, "fork failed\n");
-        exit(1);
-    } 
-    else if (f == 0){
-        temp = exec(buff, arguments);
-    }
-    else{
-        wait(0);
-    }
+    exec(argv[0], argv);
+    exit(0);
 
-    return temp;
 }
 
-int pipeThis(int numWords, char **argv){
+void pipeThis(int numWords, char **argv){
 
     int p[2];
 
@@ -92,6 +85,7 @@ int pipeThis(int numWords, char **argv){
             break;
         }  
     }
+
 
     //if there is a pipe
     if(pipeIndex != 0){
@@ -112,14 +106,16 @@ int pipeThis(int numWords, char **argv){
         }
 
         //cat README | grep the | grep bug
+        //cat README | grep m | grep p | grep i
         pipe(p);
+
         if(fork() == 0) {
             close(1);
             dup(p[1]);
-            close(p[1]);
             close(p[0]);
-            pipeThis(pipeIndex, leftArgs);      
-            exit(0);
+            close(p[1]);
+            pipeThis(pipeIndex, leftArgs);
+
         } 
         if(fork() == 0){
             close(0);
@@ -127,30 +123,82 @@ int pipeThis(int numWords, char **argv){
             close(p[0]);
             close(p[1]);
             pipeThis(pipeIndex, rightArgs);
-            exit(0);
+
         }
+
 
         close(p[0]);
         close(p[1]);
         wait(0);
         wait(0);
+
+        exit(0);
+
     }
     else{//there is no pipe
         executeCommand(argv[0], argv);
     }
 
-    return 0;
-
 }
 
+int editInput(int argc, char **argv){
+
+    int newArgc = argc;
+
+    for (int i = 0; i < argc; i++) {
+        if(strcmp(argv[i], "<")==0){
+            argv[i] = argv[i+1];
+            argv[i+1] = "|";
+            argv[i+2] = argv[i-1];
+            argv[i-1] = "cat";
+            newArgc = argc + 1;
+        }
+    }
+
+    return newArgc;
+}
+
+void redirect(int numWords, char **argv){
+
+    //find location and direction of redirect
+    //int redirectLocation = 0;
+    int redirectType = -1;
+    for(int i = 0; i < numWords; i++){
+        if (strcmp(argv[i], ">")){
+            //redirectLocation = i;
+            redirectType = 1;
+        }
+
+    }
+
+
+    if(redirectType == 0){
+
+        int fd = open(argv[numWords-1],O_CREATE | O_TRUNC | O_WRONLY);
+        if(fork()==0){
+
+            close(1);
+            dup(fd);
+            close(fd);
+            for(int i = 1; i < numWords; i++){
+                argv[i] = 0;
+            }
+            executeCommand(argv[0], argv);
+            exit(1);
+        }
+
+
+    }
+    
+}
 
 int main(void) {
     //make a whole shell :)
-    
+
     int shell_running = 1;
 
     //setup our input buffer
-    char in_buff[512], *b;
+    char in_buff[1028], *b;
     b = in_buff;
 
     //a loop which asks for a command then executes the user input
@@ -160,52 +208,69 @@ int main(void) {
         for(int i = 0; i < sizeof(in_buff); i++){
             in_buff[i] = '\0';
         }
-
         //take an input from the user
         printf(">>>");
         read(0, b, sizeof(in_buff));
 
         //get the individual words from user input
-        char **argv = malloc2dCharArray(MAXARG, MAX_WORD_LENGTH);
+        char **argv_temp = malloc2dCharArray(MAXARG, MAX_WORD_LENGTH);
         int argc;
-        argc = parseUserInput(b, argv);
+        argc = parseUserInput(b, argv_temp);
+
+        char **argv = malloc(argc * sizeof(char*));
+        for(int i = 0; i < argc; i++){
+            argv[i] = malloc(sizeof(argv_temp[i]) * sizeof(char));
+            strcpy(argv[i], argv_temp[i]);
+        }
+
+        //swaps < for a pipe version
+        argc = editInput(argc, argv);
         
         int containsPipe = 0;
-        char *arguments[50]; 
-        // Put the separated words into arguments
+        int containsRedirect = 0;
+ 
+        // Put the separated words into argv
         for (int i = 0; i < argc; i++) {
-            arguments[i] = argv[i];
-            //printf("argument: %s\n", arguments[i]);
-            //check if arguments contains a pipe
-            if(strcmp(arguments[i], "|")==0){
+            //check if argv contains a pipe
+            if(strcmp(argv[i], "|")==0){
                 containsPipe = 1;
+            }
+            else if(strcmp(argv[i], ">")==0 || strcmp(argv[i], "<")==0){
+                containsRedirect= 1;
             }
         }
 
         //handle the special case for cd
         if(strcmp(argv[0], "cd")==0){
-            chdir(arguments[1]);
+            chdir(argv[1]);
         }
         else if(strcmp(argv[0], "exit")==0){
             shell_running = 0;
         }
+        else if(containsRedirect== 1){
+            redirect(argc, argv);
+        }
         //handles pipes
         else if(containsPipe == 1){
-            //err = pipeChain(argc, arguments);
-            pipeThis(argc, arguments);
+            if(fork()==0){
+                pipeThis(argc, argv);
+            }wait(0);
         }
         //for when theres no pipes
         else{
-            executeCommand(argv[0], arguments);
+            if(fork() == 0)
+                executeCommand(argv[0], argv);
+            wait(0);
         }
 
-        //emptys arguments
-        for(int i = 0; i < argc; i++){
-            for(int j = 0; arguments[i][j] != '\0'; j++){
-                arguments[i][j] = '\0';
+        //emptys argv
+        /*for(int i = 0; i < argc; i++){
+            for(int j = 0; argv[i][j] != '\0'; j++){
+                argv[i][j] = '\0';
             }
-        }
+        }*/
 
     }
-    return 0;
+
+    exit(0);
 }
