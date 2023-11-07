@@ -166,7 +166,7 @@ void redirect(int numWords, char **argv){
     for(int i = 0; i < numWords; i++){
         if (strcmp(argv[i], ">")){
             //redirectLocation = i;
-            redirectType = 1;
+            redirectType = 0;
         }
 
     }
@@ -180,7 +180,8 @@ void redirect(int numWords, char **argv){
             close(1);
             dup(fd);
             close(fd);
-            for(int i = 1; i < numWords; i++){
+            //get rid of the file and '>'
+            for(int i = numWords; i > numWords-3; i--){
                 argv[i] = 0;
             }
             executeCommand(argv[0], argv);
@@ -258,17 +259,16 @@ int main(void) {
         }
         //for when theres no pipes
         else{
-            if(fork() == 0)
+            if(fork() == 0){
                 executeCommand(argv[0], argv);
-            wait(0);
+            }wait(0);
         }
 
         //emptys argv
-        /*for(int i = 0; i < argc; i++){
-            for(int j = 0; argv[i][j] != '\0'; j++){
-                argv[i][j] = '\0';
-            }
-        }*/
+        for(int i = 0; i < argc; i++){
+            free(argv[i]);
+        }
+        free(argv);
 
     }
 
