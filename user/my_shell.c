@@ -90,8 +90,8 @@ void pipeThis(int numWords, char **argv){
     //if there is a pipe
     if(pipeIndex != 0){
         //allocate memory for the words on each side
-        char *leftArgs[MAX_WORD_LENGTH];
-        char *rightArgs[MAX_WORD_LENGTH];
+        char **leftArgs = malloc2dCharArray(pipeIndex, MAX_WORD_LENGTH);
+        char **rightArgs = malloc2dCharArray(numWords-pipeIndex-1, MAX_WORD_LENGTH);
 
         //copy the words into the correct arrays depending on which side of the pipe the are on
         for(int i = 0; i < numWords; i++){
@@ -141,6 +141,9 @@ void pipeThis(int numWords, char **argv){
 
 }
 
+//this functions edits the user's input if it contains a '<', it turns a command such as:
+//cat < filename into
+//cat filename | cat, so that it uses pipes instead of redirects
 int editInput(int argc, char **argv){
 
     int newArgc = argc;
@@ -188,7 +191,6 @@ void redirect(int numWords, char **argv){
             exit(1);
         }
 
-
     }
     
 }
@@ -224,7 +226,7 @@ int main(void) {
             strcpy(argv[i], argv_temp[i]);
         }
 
-        //swaps < for a pipe version
+        //swaps < commands for a pipe version
         argc = editInput(argc, argv);
         
         int containsPipe = 0;
